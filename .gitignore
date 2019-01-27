@@ -21,4 +21,3 @@ grr/core/install_data/etc/server.local.yaml
 grr/server/grr_response_server/gui/static/fonts/
 grr/server/grr_response_server/gui/static/node_modules/
 grr/server/grr_response_server/gui/static/tmp/
-

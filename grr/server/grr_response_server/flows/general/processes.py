@@ -55,7 +55,7 @@ class ListProcessesMixin(object):
       raise flow.FlowError("Error during process listing %s" % responses.status)
 
     if self.args.fetch_binaries:
-      # Filter out processes entries without "exe" attribute and
+      # Filter out procegsses entries without "exe" attribute and
       # deduplicate the list.
       paths_to_fetch = set()
       for p in responses:

@@ -5,6 +5,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from grr_response_core.lib.rdfvalues import structs as rdf_structs
+from grr_response_core.lib.rdfvalues import standard as rdf_standard
 from grr_response_proto import flows_pb2
 from grr_response_server import flow
 from grr_response_server import flow_base
@@ -13,6 +14,9 @@ from grr_response_server import server_stubs
 
 class NetstatArgs(rdf_structs.RDFProtoStruct):
   protobuf = flows_pb2.NetstatArgs
+  rdf_deps = [
+      rdf_standard.RegularExpression,
+  ]
 
 
 @flow_base.DualDBFlow
@@ -29,6 +33,12 @@ class NetstatMixin(object):
         server_stubs.ListNetworkConnections,
         listening_only=self.args.listening_only,
         next_state="ValidateListNetworkConnections")
+
+  def _ConnectionIpMatch(self, netstat):
+    if not self.args.ip_regex:
+      return True
+    return self.args.ip_regex.Match(netstat.remote.ip)
+
 
   def ValidateListNetworkConnections(self, responses):
     if not responses.success:
@@ -53,10 +63,19 @@ class NetstatMixin(object):
       raise flow.FlowError("Failed to get connections. Err: {0}".format(
           responses.status))
 
+    skipped = 0
     for response in responses:
       if self.args.listening_only and response.state != "LISTEN":
         continue
+
+      if not self._ConnectionIpMatch(response):
+        skipped += 1
+        continue
+
       self.SendReply(response)
+
+    if skipped:
+      self.Log("Skipped %s connections, no match" % skipped)
 
     self.state.conn_count = len(responses)
 

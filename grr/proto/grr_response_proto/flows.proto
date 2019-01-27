@@ -2125,6 +2125,12 @@ message YaraProcessDumpResponse {
 }
 
 message NetstatArgs {
+  optional string ip_regex = 1 [(sem_type) = {
+      type: "RegularExpression",
+      friendly_name: "IP Regex",
+      description: "Regex used to filter the list of connections.",
+    }, default="."];
+
   optional bool listening_only = 1 [(sem_type) = {
       description: "If set, only listening connections are returned."
     },
