@@ -44,7 +44,7 @@ Global Install Context:
 
 Client Context:
   Client.foreman_check_frequency: 1800
-  Client.poll_max: 600
+  Client.poll_max: 5
 
 Target:Darwin:
   # The build system generates a build.yaml file with information about the

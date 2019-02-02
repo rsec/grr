@@ -26,26 +26,32 @@ def ListNetworkConnectionsFromClient(args):
     try:
       connections = proc.connections()
     except (psutil.NoSuchProcess, psutil.AccessDenied):
+      logging.error('Error listing process')
       continue
 
     for conn in connections:
       if args.listening_only and conn.status != "LISTEN":
         continue
 
+
       res = rdf_client_network.NetworkConnection()
       res.pid = proc.pid
       res.process_name = proc.name()
       res.family = conn.family
       res.type = conn.type
+
+
       try:
         if conn.status:
           res.state = conn.status
       except ValueError:
-        logging.warn("Encountered unknown connection status (%s).", conn.status)
+        logging.warning("Encountered unknown connection status (%s).", conn.status)
 
       res.local_address.ip, res.local_address.port = conn.laddr
       if conn.raddr:
         res.remote_address.ip, res.remote_address.port = conn.raddr
+
+      logging.debug('Found connection: %s', res)
 
       yield res
 

@@ -34,11 +34,17 @@ class NetstatMixin(object):
         listening_only=self.args.listening_only,
         next_state="ValidateListNetworkConnections")
 
-  def _ConnectionIpMatch(self, netstat):
+  def _ConnectionRemoteIpMatch(self, netstat):
     if not self.args.ip_regex:
       return True
-    return self.args.ip_regex.Match(netstat.remote.ip)
-
+    self.Log('Matching %s with %s', netstat.remote_address.ip, self.args.ip_regex)
+    ip = netstat.remote_address.ip
+    # FIXME: hack for ipv4 addr in ipv6 format
+    if ip.startswith('::ffff:'):
+      ip = ip.replace('::ffff:', '')
+    res = self.args.ip_regex.Match(ip)
+    self.Log('Match result: %s', res)
+    return res
 
   def ValidateListNetworkConnections(self, responses):
     if not responses.success:
@@ -49,6 +55,7 @@ class NetstatMixin(object):
       self.CallClient(server_stubs.Netstat, next_state="StoreNetstat")
     else:
       self.CallStateInline(next_state="StoreNetstat", responses=responses)
+
 
   def StoreNetstat(self, responses):
     """Collects the connections.
@@ -63,22 +70,20 @@ class NetstatMixin(object):
       raise flow.FlowError("Failed to get connections. Err: {0}".format(
           responses.status))
 
-    skipped = 0
+    self.skipped = 0
     for response in responses:
       if self.args.listening_only and response.state != "LISTEN":
         continue
 
-      if not self._ConnectionIpMatch(response):
-        skipped += 1
+      if not self._ConnectionRemoteIpMatch(response):
+        self.skipped += 1
         continue
 
       self.SendReply(response)
 
-    if skipped:
-      self.Log("Skipped %s connections, no match" % skipped)
-
     self.state.conn_count = len(responses)
+
 
   def End(self, responses):
     del responses
-    self.Log("Successfully wrote %d connections.", self.state.conn_count)
+    self.Log("Successfully wrote %d connections. Skipped %s connections, no match.", self.state.conn_count, self.skipped)
